@@ -1,0 +1,6 @@
+{
+  "name": "Vibe Blogs",
+  "description": "Free multi-author blogging platform with rich editorial publishing, real-time reader engagement tracking, personal author analytics, and role-based moderation.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

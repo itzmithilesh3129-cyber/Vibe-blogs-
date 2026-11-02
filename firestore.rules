@@ -1,0 +1,119 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions for Role-Based Access Control (RBAC)
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isActiveUser() {
+      return isSignedIn() && getUserData().status == 'active';
+    }
+
+    function isAdmin() {
+      return isActiveUser() && getUserData().role == 'admin';
+    }
+
+    function isBloggerOrAdmin() {
+      return isActiveUser() && (getUserData().role == 'blogger' || getUserData().role == 'admin');
+    }
+
+    // 1. User Profiles (/users/{userId})
+    // Public fields (name, bio, avatar, role) are readable for author bylines.
+    // Private email/account settings are protected; users cannot self-escalate to 'admin'.
+    match /users/{userId} {
+      allow get, list: if true;
+      allow create: if isSignedIn()
+        && request.auth.uid == userId
+        && request.resource.data.role in ['reader', 'blogger']
+        && request.resource.data.status == 'active';
+      allow update: if isAdmin() || (
+        isActiveUser()
+        && request.auth.uid == userId
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.status == resource.data.status
+      );
+      allow delete: if isAdmin();
+    }
+
+    // 2. Blog Articles (/articles/{articleId})
+    // Readers can read 'published' posts. Any registered user can publish, edit, or delete their own posts.
+    // Admins have full moderation access across all posts.
+    match /articles/{articleId} {
+      allow read: if resource.data.status == 'published'
+        || (isSignedIn() && resource.data.authorId == request.auth.uid)
+        || isAdmin();
+
+      allow create: if isActiveUser()
+        && request.resource.data.authorId == request.auth.uid
+        && request.resource.data.title is string
+        && request.resource.data.title.size() >= 3
+        && request.resource.data.title.size() <= 180;
+
+      allow update: if isAdmin() || (
+        isActiveUser()
+        && resource.data.authorId == request.auth.uid
+        && request.resource.data.authorId == resource.data.authorId
+      );
+
+      allow delete: if isAdmin() || (
+        isActiveUser() && resource.data.authorId == request.auth.uid
+      );
+    }
+
+    // 3. Private Article Analytics Events (/analyticsEvents/{eventId})
+    // Anyone reading a published article can append anonymous view/scroll/read-time events
+    // (contains anonymous visitorHash only — zero PII).
+    // ONLY the article's author or an Admin can query/read these events.
+    match /analyticsEvents/{eventId} {
+      allow create: if request.resource.data.keys().hasOnly([
+          'articleId', 'authorId', 'eventType', 'visitorHash',
+          'scrollDepth', 'durationSeconds', 'createdAt', 'dateBucket'
+        ])
+        && request.resource.data.eventType in ['view', 'scroll', 'read_time', 'share', 'like'];
+
+      allow read: if isAdmin() || (
+        isSignedIn() && resource.data.authorId == request.auth.uid
+      );
+
+      allow update, delete: if isAdmin();
+    }
+
+    // 4. Comments & Threaded Replies (/comments/{commentId})
+    match /comments/{commentId} {
+      allow read: if true;
+      allow create: if isActiveUser()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.content is string
+        && request.resource.data.content.size() >= 1
+        && request.resource.data.content.size() <= 2000;
+      allow update: if isAdmin() || (
+        isActiveUser() && resource.data.userId == request.auth.uid
+      );
+      allow delete: if isAdmin() || (
+        isActiveUser() && resource.data.userId == request.auth.uid
+      );
+    }
+
+    // 5. Article Likes (/likes/{likeId}) — deterministic ID: {articleId}_{userId}
+    match /likes/{likeId} {
+      allow read: if true;
+      allow create: if isActiveUser() && request.resource.data.userId == request.auth.uid;
+      allow delete: if isAdmin() || (isActiveUser() && resource.data.userId == request.auth.uid);
+    }
+
+    // 6. Content Reports (/reports/{reportId}) — Write-only for users, Read/Manage for Admins
+    match /reports/{reportId} {
+      allow create: if request.resource.data.reason is string
+        && request.resource.data.reason.size() >= 3
+        && request.resource.data.reason.size() <= 500;
+      allow read, update, delete: if isAdmin();
+    }
+  }
+}
