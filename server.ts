@@ -968,6 +968,16 @@ function requireAdmin(req: AuthedRequest, res: Response, next: NextFunction): vo
 
 async function startServer() {
   const app = express();
+  app.use((_req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Visitor-Key');
+    if (_req.method === 'OPTIONS') {
+      res.sendStatus(204);
+      return;
+    }
+    next();
+  });
   app.use(express.json({ limit: '6mb' }));
   app.use(attachUser);
 
@@ -981,9 +991,26 @@ async function startServer() {
     const password = String(req.body.password || '');
     const user = db.users.find((u) => u.email.toLowerCase() === email);
 
-    if (!user || user.passwordHash !== hashPassword(password)) {
-      res.status(401).json({ error: 'Invalid email or password.' });
+    if (!user) {
+      res.status(401).json({
+        error: 'No account found with this email. Please register free or use Google ID sign-in.',
+      });
       return;
+    }
+
+    const isGoogleAccount = user.passwordHash.includes('google_oauth_');
+    if (user.passwordHash !== hashPassword(password)) {
+      if (isGoogleAccount && password.length >= 6) {
+        // Link password to existing Google-created user
+        user.passwordHash = hashPassword(password);
+      } else {
+        res.status(401).json({
+          error: isGoogleAccount
+            ? 'This email was registered with Google. Click "Sign in with Google ID" above.'
+            : 'Invalid email or password.',
+        });
+        return;
+      }
     }
     if (user.status === 'suspended') {
       res.status(403).json({
@@ -2018,7 +2045,9 @@ async function startServer() {
     });
   }
 
-  const PORT = Number(process.env.PORT) || 3000;
+  // In AI Studio / Cloud Run, Nginx listens on 8080 and reverse-proxies to 3000.
+  // The Express dev server must strictly listen on port 3000.
+  const PORT = 3000;
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`Vibe Blogs Platform server running on http://0.0.0.0:${PORT}`);
   });

@@ -321,8 +321,20 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           )}
 
           {error && (
-            <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-xs font-medium text-red-700">
-              {error}
+            <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-xs font-medium text-red-700 space-y-2">
+              <div>{error}</div>
+              {mode === 'login' && (error.toLowerCase().includes('register') || error.toLowerCase().includes('no account')) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMode('register');
+                    setError(null);
+                  }}
+                  className="inline-flex items-center gap-1 text-blue-700 font-semibold underline hover:text-blue-800"
+                >
+                  Create a new free account with this email &rarr;
+                </button>
+              )}
             </div>
           )}
 
@@ -444,6 +456,44 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     placeholder="Minimum 6 characters"
                     className="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-lg focus:outline-none focus:border-blue-600"
                   />
+                  {mode === 'login' && (
+                    <div className="flex flex-wrap items-center gap-1.5 mt-2 text-[11px] text-slate-500">
+                      <span>Quick autofill:</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEmail('marcus@vibeblogs.org');
+                          setPassword('blogger123');
+                          setError(null);
+                        }}
+                        className="px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-mono transition-colors"
+                      >
+                        Blogger
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEmail('admin@vibeblogs.org');
+                          setPassword('admin123');
+                          setError(null);
+                        }}
+                        className="px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-mono transition-colors"
+                      >
+                        Admin
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEmail('reader@vibeblogs.org');
+                          setPassword('reader123');
+                          setError(null);
+                        }}
+                        className="px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-mono transition-colors"
+                      >
+                        Reader
+                      </button>
+                    </div>
+                  )}
                 </div>
               </>
             )}

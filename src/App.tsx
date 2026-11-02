@@ -267,32 +267,27 @@ export function App() {
                     </div>
                   </div>
 
-                  {(currentUser.role === 'blogger' ||
-                    currentUser.role === 'admin') && (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setAccountMenuOpen(false);
-                          handleStartNewArticle();
-                        }}
-                        className="w-full px-4 py-2 text-left text-slate-700 hover:bg-slate-50 flex items-center gap-2 font-medium"
-                      >
-                        <PenSquare className="w-3.5 h-3.5 text-blue-600" />
-                        <span>Write New Article</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setAccountMenuOpen(false);
-                          setRoute('blogger_dashboard');
-                        }}
-                        className="w-full px-4 py-2 text-left text-slate-700 hover:bg-slate-50"
-                      >
-                        Blogger Dashboard
-                      </button>
-                    </>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAccountMenuOpen(false);
+                      handleStartNewArticle();
+                    }}
+                    className="w-full px-4 py-2 text-left text-slate-700 hover:bg-slate-50 flex items-center gap-2 font-medium"
+                  >
+                    <PenSquare className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Write New Article</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAccountMenuOpen(false);
+                      setRoute('blogger_dashboard');
+                    }}
+                    className="w-full px-4 py-2 text-left text-slate-700 hover:bg-slate-50"
+                  >
+                    Blogger Dashboard
+                  </button>
 
                   {currentUser.role === 'admin' && (
                     <button
